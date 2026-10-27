@@ -208,8 +208,22 @@ class CodeAnalyzer(ast.NodeVisitor):
             and self._has_dynamic_value(node)
         ):
             self._add_sql_bug(node)
-        self.generic_visit(node)
 
+        # Detect definite division or modulo by a literal zero.
+        if (
+            isinstance(node.op, (ast.Div, ast.FloorDiv, ast.Mod))
+            and isinstance(node.right, ast.Constant)
+            and isinstance(node.right.value, (int, float))
+            and not isinstance(node.right.value, bool)
+            and node.right.value == 0
+        ):
+            self._add_bug(
+                node, "Logic", "High",
+                "Division or modulo by zero will raise ZeroDivisionError",
+                "Check that the denominator is not zero before this operation"
+            )
+
+        self.generic_visit(node)
     def visit_Assign(self, node):
         for target in node.targets:
             self._check_secret_assignment(target, node.value)
@@ -515,12 +529,21 @@ def build_report(bugs, function_loc):
 
 
 def analyze_source(source_code, filename="code.py"):
-    """Analyze Python source code given directly as a string (used by the web UI)."""
-    analyzer = CodeAnalyzer(source_code, filename=filename)
+    """Analyze Python source and report syntax errors as findings."""
+    try:
+        analyzer = CodeAnalyzer(source_code, filename=filename)
+    except SyntaxError as error:
+        syntax_bug = Bug(
+            error.lineno or 1,
+            "Syntax",
+            "High",
+            f"Python syntax error: {error.msg}",
+            "Fix the indicated syntax, such as a missing colon, bracket, quote, or valid indentation"
+        )
+        return build_report([syntax_bug], {})
+
     bugs = analyzer.analyze()
     return build_report(bugs, analyzer.function_loc)
-
-
 def analyze_file(path):
     with open(path, "r") as f:
         source = f.read()
