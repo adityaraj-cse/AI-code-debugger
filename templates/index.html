@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f7f9fc">
+<title>CodeLens — Python Code Health</title>
+<style>
+  :root {
+    color-scheme: light;
+    --ink: #111a35;
+    --muted: #64708a;
+    --line: #e6eaf2;
+    --teal: #0bbf9a;
+    --blue: #249ce5;
+    --navy: #091333;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; color: var(--ink); background: #f7f9fc; font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  a { color: inherit; text-decoration: none; }
+  .site-header { height: 72px; display: flex; align-items: center; justify-content: space-between; padding: 0 max(6vw, 24px); background: rgba(255,255,255,.92); border-bottom: 1px solid var(--line); }
+  .brand { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 800; letter-spacing: -.04em; }
+  .brand-mark { width: 31px; height: 31px; display: grid; place-items: center; border-radius: 9px; color: white; background: linear-gradient(135deg, var(--teal), var(--blue)); font-size: 17px; }
+  .nav { display: flex; align-items: center; gap: 27px; color: #64708a; font-size: 13px; font-weight: 600; }
+  .nav a:hover { color: var(--ink); }
+  .nav .nav-cta { padding: 10px 15px; border: 1px solid #dce3ed; border-radius: 9px; color: var(--ink); background: white; }
+  .hero { position: relative; overflow: hidden; padding: 68px 24px 70px; text-align: center; background-color: #fbfcfe; background-image: linear-gradient(rgba(18,34,65,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(18,34,65,.045) 1px, transparent 1px); background-size: 24px 24px; }
+  .hero::before { position: absolute; inset: 0; content: ""; background: radial-gradient(ellipse at 50% 20%, rgba(255,255,255,.84), rgba(255,255,255,.15) 70%); pointer-events: none; }
+  .hero-inner { position: relative; max-width: 900px; margin: auto; }
+  .eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border: 1px solid #cceee7; border-radius: 99px; color: #168a78; background: #effcf8; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+  .eyebrow-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 0 4px rgba(11,191,154,.12); }
+  h1 { max-width: 760px; margin: 21px auto 12px; font-size: clamp(36px, 5.2vw, 60px); line-height: 1.06; letter-spacing: -.06em; }
+  h1 span { color: #0ab695; }
+  .hero-copy { max-width: 600px; margin: 0 auto; color: var(--muted); font-size: 16px; line-height: 1.7; }
+  .upload-card { max-width: 760px; margin: 33px auto 0; padding: 22px; border: 1px solid #e8edf4; border-radius: 16px; background: rgba(255,255,255,.96); box-shadow: 0 18px 55px rgba(21,38,72,.11); text-align: left; }
+  .tabs { display: flex; gap: 6px; width: fit-content; margin-bottom: 16px; padding: 4px; border-radius: 10px; background: #f1f4f8; }
+  .tab-btn { padding: 9px 14px; border: 0; border-radius: 7px; color: #64708a; background: transparent; cursor: pointer; font: inherit; font-size: 13px; font-weight: 700; }
+  .tab-btn.active { color: white; background: var(--navy); box-shadow: 0 2px 6px rgba(9,19,51,.18); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  textarea { display: block; width: 100%; min-height: 190px; resize: vertical; padding: 16px; border: 1px solid #dfe5ee; border-radius: 10px; outline: none; color: #24304d; background: #fbfcfe; font: 13px/1.65 Consolas, Monaco, monospace; }
+  textarea:focus, input[type=file]:focus-visible { border-color: #61cdb9; box-shadow: 0 0 0 3px rgba(11,191,154,.12); }
+  .drop-zone { min-height: 190px; display: grid; place-content: center; justify-items: center; gap: 10px; padding: 22px; border: 1.5px dashed #cbd6e4; border-radius: 10px; color: var(--muted); background: #fbfcfe; text-align: center; }
+  .upload-icon { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 13px; color: #078c78; background: #e4faf4; font-size: 21px; }
+  .drop-zone strong { color: var(--ink); font-size: 14px; }
+  .drop-zone small { font-size: 12px; }
+  input[type=file] { max-width: 100%; font-size: 12px; }
+  .submit-row { display: flex; align-items: center; gap: 16px; margin-top: 16px; }
+  .submit { min-height: 46px; padding: 0 22px; border: 0; border-radius: 9px; color: white; background: linear-gradient(100deg, #0bbf9a, #179ee0); box-shadow: 0 7px 18px rgba(19,174,174,.22); cursor: pointer; font: inherit; font-size: 14px; font-weight: 800; transition: transform .18s, box-shadow .18s; }
+  .submit:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(19,174,174,.28); }
+  .submit:disabled { opacity: .7; cursor: wait; transform: none; }
+  .privacy-note { color: #79849a; font-size: 11px; }
+  .error { margin-bottom: 16px; padding: 12px 14px; border: 1px solid #fecaca; border-radius: 9px; color: #991b1b; background: #fff1f2; font-size: 13px; }
+  .trust-row { display: flex; justify-content: center; gap: 27px; margin-top: 24px; color: #66728a; font-size: 11px; font-weight: 700; }
+  .trust-row span::before { margin-right: 7px; color: var(--teal); content: "✓"; }
+  .preview-wrap { max-width: 960px; margin: 0 auto; padding: 0 24px 74px; }
+  .preview-window { overflow: hidden; border: 1px solid #dce3ee; border-radius: 14px; background: #fff; box-shadow: 0 25px 65px rgba(14,32,70,.14); }
+  .window-bar { height: 39px; display: flex; align-items: center; gap: 6px; padding: 0 14px; border-bottom: 1px solid #e7ebf2; background: #f5f7fa; }
+  .window-dot { width: 8px; height: 8px; border-radius: 50%; background: #e6a3a3; }
+  .window-dot:nth-child(2) { background: #edc76c; }
+  .window-dot:nth-child(3) { background: #56c7a6; }
+  .window-address { width: min(390px, 60%); margin: 0 auto; padding: 4px 12px; border: 1px solid #e7eaf0; border-radius: 5px; color: #8992a4; background: white; text-align: center; font-size: 9px; }
+  .preview-dashboard { display: grid; grid-template-columns: 170px 1fr; min-height: 285px; }
+  .preview-sidebar { padding: 19px 13px; color: #c6cde0; background: #091333; }
+  .preview-brand { margin: 0 0 22px 9px; color: white; font-size: 12px; font-weight: 800; }
+  .preview-nav { padding: 9px 10px; border-radius: 7px; color: #dce3f2; font-size: 10px; }
+  .preview-nav.active { color: #101a37; background: white; font-weight: 800; }
+  .preview-content { padding: 20px; background: #f7f8fb; }
+  .preview-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 13px; font-size: 13px; font-weight: 800; }
+  .preview-tag { padding: 6px 9px; border: 1px solid #d5efe9; border-radius: 99px; color: #0d927d; background: #effbf7; font-size: 9px; }
+  .preview-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
+  .preview-stat { min-height: 67px; padding: 11px; border: 1px solid #e6eaf1; border-radius: 9px; background: white; }
+  .preview-stat small { display: block; margin-bottom: 8px; color: #6d7890; font-size: 9px; }
+  .preview-stat b { color: #111a35; font-size: 17px; }
+  .preview-stat:nth-child(1) b { color: #0aa884; }
+  .preview-stat:nth-child(2) b { color: #e29a16; }
+  .preview-stat:nth-child(3) b { color: #7c54da; }
+  .preview-stat:nth-child(4) b { color: #248fe0; }
+  .preview-lower { display: grid; grid-template-columns: 1.15fr .85fr; gap: 10px; margin-top: 10px; }
+  .preview-panel { min-height: 116px; padding: 13px; border: 1px solid #e6eaf1; border-radius: 9px; background: white; }
+  .preview-panel-title { margin-bottom: 12px; font-size: 10px; font-weight: 800; }
+  .issue-line { display: flex; justify-content: space-between; padding: 7px 0; border-top: 1px solid #eff1f5; color: #68748b; font-size: 9px; }
+  .issue-line b { color: #e46a58; font-size: 8px; }
+  .quality-bars { display: grid; gap: 10px; }
+  .quality-bars span { height: 6px; border-radius: 99px; background: linear-gradient(90deg, #10bd98 68%, #edf1f5 68%); }
+  .quality-bars span:nth-child(2) { background: linear-gradient(90deg, #249ce5 84%, #edf1f5 84%); }
+  .quality-bars span:nth-child(3) { background: linear-gradient(90deg, #9061df 55%, #edf1f5 55%); }
+  .features { display: grid; grid-template-columns: repeat(4, 1fr); gap: 13px; max-width: 960px; margin: 0 auto; padding: 0 24px 70px; }
+  .feature { padding: 17px; border: 1px solid #e8edf4; border-radius: 11px; background: white; }
+  .feature-icon { margin-bottom: 10px; font-size: 19px; }
+  .feature b { display: block; margin-bottom: 5px; font-size: 13px; }
+  .feature p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
+  footer { padding: 22px; border-top: 1px solid var(--line); color: #7a8497; background: white; text-align: center; font-size: 11px; }
+  @media (max-width: 650px) {
+    .site-header { height: 62px; padding: 0 18px; }
+    .nav { gap: 13px; font-size: 11px; }
+    .nav a:not(.nav-cta) { display: none; }
+    .hero { padding: 50px 16px; }
+    .hero-copy { font-size: 14px; }
+    .upload-card { padding: 16px; }
+    .submit-row { align-items: flex-start; flex-direction: column; }
+    .preview-dashboard { grid-template-columns: 1fr; }
+    .preview-sidebar { display: none; }
+    .preview-content { padding: 14px; }
+    .preview-stats { grid-template-columns: repeat(2, 1fr); }
+    .preview-lower { grid-template-columns: 1fr; }
+    .preview-wrap { padding-bottom: 45px; }
+    .features { grid-template-columns: repeat(2, 1fr); padding-bottom: 45px; }
+    .trust-row { flex-wrap: wrap; gap: 10px 18px; }
+  }
+</style>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="CodeLens home"><span class="brand-mark">⌘</span>CodeLens</a>
+    <nav class="nav" aria-label="Main navigation">
+      <a href="#features">Features</a>
+      <a href="#dashboard-preview">Dashboard</a>
+      <a class="nav-cta" href="#analyze">Analyze code</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" id="analyze">
+      <div class="hero-inner">
+        <div class="eyebrow"><span class="eyebrow-dot"></span> Python code health, at a glance</div>
+        <h1>Ship better code<br>with <span>confidence.</span></h1>
+        <p class="hero-copy">Find security risks, bugs and code smells in seconds. Upload a Python file or paste your code to get a clear, actionable analysis.</p>
+
+        <div class="upload-card">
+          {% if error %}
+          <div class="error" role="alert">{{ error }}</div>
+          {% endif %}
+          <div class="tabs" role="tablist" aria-label="Choose code input method">
+            <button type="button" class="tab-btn active" role="tab" aria-selected="true" onclick="switchTab(event, 'paste')">Paste code</button>
+            <button type="button" class="tab-btn" role="tab" aria-selected="false" onclick="switchTab(event, 'upload')">Upload .py file</button>
+          </div>
+          <form action="/analyze" method="post" enctype="multipart/form-data" onsubmit="showLoading(this)">
+            <div id="paste-tab" class="tab-content active">
+              <textarea name="code_text" aria-label="Python source code" placeholder="Paste your Python code here...">{{ request.form.code_text if request.form else '' }}</textarea>
+            </div>
+            <div id="upload-tab" class="tab-content">
+              <label class="drop-zone" for="code-file">
+                <span class="upload-icon">↑</span>
+                <strong>Choose a Python file to analyze</strong>
+                <small>Only .py files · Up to 2 MB</small>
+                <input id="code-file" type="file" name="code_file" accept=".py,text/x-python">
+              </label>
+            </div>
+            <div class="submit-row">
+              <button type="submit" class="submit">Analyze my code <span aria-hidden="true">→</span></button>
+              <span class="privacy-note">Your code is analyzed locally and is not saved.</span>
+            </div>
+          </form>
+        </div>
+        <div class="trust-row"><span>Security checks</span><span>Actionable suggestions</span><span>Instant visual report</span></div>
+      </div>
+    </section>
+
+    <section class="preview-wrap" id="dashboard-preview" aria-label="Dashboard preview">
+      <div class="preview-window">
+        <div class="window-bar"><span class="window-dot"></span><span class="window-dot"></span><span class="window-dot"></span><div class="window-address">codelens.local / analysis dashboard</div></div>
+        <div class="preview-dashboard">
+          <aside class="preview-sidebar">
+            <div class="preview-brand">CodeLens</div>
+            <div class="preview-nav active">▦ &nbsp; Overview</div>
+            <div class="preview-nav">⌘ &nbsp; Code health</div>
+            <div class="preview-nav">◇ &nbsp; Security</div>
+            <div class="preview-nav">≡ &nbsp; Findings</div>
+          </aside>
+          <div class="preview-content">
+            <div class="preview-heading">Analysis dashboard <span class="preview-tag">● Ready to scan</span></div>
+            <div class="preview-stats">
+              <div class="preview-stat"><small>Code health</small><b>0–100</b></div>
+              <div class="preview-stat"><small>Security findings</small><b>Live scan</b></div>
+              <div class="preview-stat"><small>Code quality</small><b>AST based</b></div>
+              <div class="preview-stat"><small>Suggestions</small><b>Actionable</b></div>
+            </div>
+            <div class="preview-lower">
+              <div class="preview-panel"><div class="preview-panel-title">What your report includes</div><div class="issue-line"><span>Security &amp; logic findings</span><b>BY SEVERITY</b></div><div class="issue-line"><span>Exact source line and suggested fix</span><b>DETAILS</b></div><div class="issue-line"><span>Function-wise issue distribution</span><b>INSIGHTS</b></div></div>
+              <div class="preview-panel"><div class="preview-panel-title">Code health signals</div><div class="quality-bars"><span></span><span></span><span></span></div><div class="issue-line"><span>Score and density are calculated per scan</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="features" id="features" aria-label="Analyzer capabilities">
+      <article class="feature"><div class="feature-icon">◈</div><b>Security</b><p>Highlights hardcoded credentials, risky SQL, eval and unsafe subprocess patterns.</p></article>
+      <article class="feature"><div class="feature-icon">⌁</div><b>Logic checks</b><p>Finds broad exception handling and mutable default arguments.</p></article>
+      <article class="feature"><div class="feature-icon">▤</div><b>Code smells</b><p>Surfaces long functions and deeply nested conditional blocks.</p></article>
+      <article class="feature"><div class="feature-icon">✳</div><b>Style insights</b><p>Points out unused names and incorrect identity or None comparisons.</p></article>
+    </section>
+  </main>
+  <footer>CodeLens · Python static analysis with clear, practical insights.</footer>
+  <script>
+    function switchTab(clickEvent, tab) {
+      document.querySelectorAll('.tab-btn').forEach(button => {
+        button.classList.remove('active');
+        button.setAttribute('aria-selected', 'false');
+      });
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      clickEvent.currentTarget.classList.add('active');
+      clickEvent.currentTarget.setAttribute('aria-selected', 'true');
+      document.getElementById(tab + '-tab').classList.add('active');
+    }
+
+    function showLoading(form) {
+      const submit = form.querySelector('.submit');
+      submit.disabled = true;
+      submit.textContent = 'Analyzing…';
+    }
+  </script>
+</body>
+</html>
